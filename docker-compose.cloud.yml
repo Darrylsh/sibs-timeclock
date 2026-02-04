@@ -1,6 +1,6 @@
 services:
   # 1. Database (Dedicated for Timeclock)
-  db:
+  timeclock-db:
     image: postgres:15-alpine
     restart: always
     environment:
@@ -10,7 +10,7 @@ services:
     volumes:
       - timeclock_db_data:/var/lib/postgresql/data
     networks:
-      - doppelganger-chess_default
+      - timeclock-net
 
   # 2. Backend API
   api:
@@ -18,7 +18,7 @@ services:
     restart: always
     environment:
       PORT: 3000
-      DB_HOST: db
+      DB_HOST: timeclock-db
       DB_PORT: 5432
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
@@ -26,16 +26,16 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SYNC_SECRET: ${SYNC_SECRET}
     depends_on:
-      - db
+      - timeclock-db
     networks:
-      - doppelganger-chess_default
+      - timeclock-net
 
   # 3. PWA Frontend
   pwa:
     image: ghcr.io/darrylsh/sibs-timeclock/pwa:latest
     restart: always
     networks:
-      - doppelganger-chess_default
+      - timeclock-net
 
   # 4. Internal Proxy (Exposes single port to Host)
   proxy:
@@ -49,12 +49,12 @@ services:
       - api
       - pwa
     networks:
-      - doppelganger-chess_default
+      - timeclock-net
 
 volumes:
   timeclock_db_data:
 
 
 networks:
-  doppelganger-chess_default:
-    external: true
+  timeclock-net:
+    driver: bridge
