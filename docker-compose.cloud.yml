@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # 1. Database (Dedicated for Timeclock)
   db:
@@ -16,7 +14,7 @@ services:
 
   # 2. Backend API
   api:
-    build: ./server-cloud
+    image: ghcr.io/darrylsh/sibs-timeclock/api:latest
     restart: always
     environment:
       PORT: 3000
@@ -34,7 +32,7 @@ services:
 
   # 3. PWA Frontend
   pwa:
-    build: ./timeclock-pwa
+    image: ghcr.io/darrylsh/sibs-timeclock/pwa:latest
     restart: always
     networks:
       - doppelganger-chess_default

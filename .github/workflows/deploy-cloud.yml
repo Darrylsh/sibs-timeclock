@@ -36,14 +36,14 @@ jobs:
         with:
           context: ./server-cloud
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-api:latest
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/api:latest
 
       - name: Build and push PWA image
         uses: docker/build-push-action@v4
         with:
           context: ./timeclock-pwa
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-pwa:latest
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}/pwa:latest
 
   deploy:
     runs-on: ubuntu-latest
