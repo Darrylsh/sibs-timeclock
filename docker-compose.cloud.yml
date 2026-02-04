@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # 1. Database (Dedicated for Timeclock)
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - timeclock_db_data:/var/lib/postgresql/data
+    networks:
+      - doppelganger-chess_default
+
+  # 2. Backend API
+  api:
+    build: ./server-cloud
+    restart: always
+    environment:
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      SYNC_SECRET: ${SYNC_SECRET}
+    depends_on:
+      - db
+    networks:
+      - doppelganger-chess_default
+
+  # 3. PWA Frontend
+  pwa:
+    build: ./timeclock-pwa
+    restart: always
+    networks:
+      - doppelganger-chess_default
+
+  # 4. Internal Proxy (Exposes single port to Host)
+  proxy:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "${HOST_PORT}:80" # Maps local port (e.g. 4000) to container 80
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - api
+      - pwa
+    networks:
+      - doppelganger-chess_default
+
+volumes:
+  timeclock_db_data:
+
+
+networks:
+  doppelganger-chess_default:
+    external: true

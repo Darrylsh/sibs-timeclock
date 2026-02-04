@@ -1,0 +1,84 @@
+name: Deploy Cloud Timeclock
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'server-cloud/**'
+      - 'timeclock-pwa/**'
+      - 'docker-compose.cloud.yml'
+      - '.github/workflows/deploy-cloud.yml'
+
+env:
+  REGISTRY: ghcr.io
+  REPO_NAME: darrylsh/sibs-timeclock
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./server-cloud
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-api:latest
+
+      - name: Build and push PWA image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./timeclock-pwa
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.REPO_NAME }}-pwa:latest
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Copy Compose and Config to Server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          source: "docker-compose.cloud.yml,nginx-proxy.conf"
+          target: "/opt/timeclock"
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          script: |
+            cd /opt/timeclock
+            echo "DB_USER=${{ secrets.DB_USER }}" > .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_NAME=timeclock_prod" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "SYNC_SECRET=${{ secrets.SYNC_SECRET }}" >> .env
+            echo "HOST_PORT=4000" >> .env
+            
+            # Login to GHCR on server
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            docker compose -f docker-compose.cloud.yml pull
+            docker compose -f docker-compose.cloud.yml up -d --remove-orphans
