@@ -19,10 +19,10 @@ app.use(express.json());
 app.use(morgan('combined'));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/config', configRoutes);
-app.use('/api/sync', syncRoutes);
+app.use('/api/timeclock/auth', authRoutes);
+app.use('/api/timeclock/events', eventRoutes);
+app.use('/api/timeclock/config', configRoutes);
+app.use('/api/timeclock/sync', syncRoutes);
 
 app.get('/health', (req, res) => res.send('OK'));
 
