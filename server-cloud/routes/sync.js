@@ -90,6 +90,27 @@ router.post('/import', requireSecret, async (req, res) => {
             }
         }
 
+        // Upsert Timeclock Users (Login Accounts)
+        if (req.body.timeclock_users && req.body.timeclock_users.length > 0) {
+            results.timeclock_users = 0;
+            for (const u of req.body.timeclock_users) {
+                // Ensure role is valid (default to user)
+                const role = (u.role === 'admin' || u.role === 'user') ? u.role : 'user';
+
+                await db.query(`
+                    INSERT INTO timeclock_users (id, phone, pin_hash, role, employee_id, is_active)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    ON CONFLICT (id) DO UPDATE SET
+                        phone = EXCLUDED.phone,
+                        pin_hash = EXCLUDED.pin_hash,
+                        role = EXCLUDED.role,
+                        employee_id = EXCLUDED.employee_id,
+                        is_active = EXCLUDED.is_active
+                `, [u.id, u.phone, u.pin_hash, role, u.employee_id, u.is_active]);
+                results.timeclock_users++;
+            }
+        }
+
         console.log(`[Sync] Imported ${results.companies} companies, ${results.employees} employees, ${results.work_codes} work codes`);
         res.json({ success: true, ...results });
 
