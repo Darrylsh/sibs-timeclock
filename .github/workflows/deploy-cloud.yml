@@ -7,6 +7,7 @@ on:
       - 'server-cloud/**'
       - 'timeclock-pwa/**'
       - 'docker-compose.cloud.yml'
+      - 'nginx-proxy.conf'
       - '.github/workflows/deploy-cloud.yml'
 
 env:
