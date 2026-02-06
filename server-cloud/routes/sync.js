@@ -41,15 +41,49 @@ router.post('/ack', requireSecret, async (req, res) => {
     }
 });
 
-// 3. Import Config (LAN pushes Users/Employees/Codes)
+// 3. Import Config (LAN pushes Employees/Work Codes)
 router.post('/import', requireSecret, async (req, res) => {
-    // This is complex. We need to upsert data from LAN.
-    // For now, let's just stub it or handle simple table replacements?
-    // Replacement is dangerous if IDs change.
-    // Upsert is safer.
-    // Let's assume LAN sends "Updates".
-    // For Phase 1, we might manually sync the DB, but having the endpoint is good.
-    res.json({ message: "Config sync not yet fully implemented" });
+    const { employees, work_codes } = req.body;
+    const results = { employees: 0, work_codes: 0 };
+
+    try {
+        // Upsert Employees (LAN is source of truth)
+        if (employees && employees.length > 0) {
+            for (const emp of employees) {
+                await db.query(`
+                    INSERT INTO employees (id, first_name, last_name, company_id)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (id) DO UPDATE SET
+                        first_name = EXCLUDED.first_name,
+                        last_name = EXCLUDED.last_name,
+                        company_id = EXCLUDED.company_id
+                `, [emp.id, emp.first_name, emp.last_name, emp.company_id]);
+                results.employees++;
+            }
+        }
+
+        // Upsert Work Codes
+        if (work_codes && work_codes.length > 0) {
+            for (const wc of work_codes) {
+                await db.query(`
+                    INSERT INTO work_codes (id, code, description, is_selectable)
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT (id) DO UPDATE SET
+                        code = EXCLUDED.code,
+                        description = EXCLUDED.description,
+                        is_selectable = EXCLUDED.is_selectable
+                `, [wc.id, wc.code, wc.description, wc.is_selectable]);
+                results.work_codes++;
+            }
+        }
+
+        console.log(`[Sync] Imported ${results.employees} employees, ${results.work_codes} work codes`);
+        res.json({ success: true, ...results });
+
+    } catch (e) {
+        console.error('[Sync] Import error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 module.exports = router;
