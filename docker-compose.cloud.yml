@@ -50,13 +50,11 @@ services:
       - pwa
     networks:
       - timeclock-net
-      - doppelganger-chess_default
 
 volumes:
   timeclock_db_data:
 
+
 networks:
   timeclock-net:
     driver: bridge
-  doppelganger-chess_default:
-    external: true
