@@ -41,12 +41,25 @@ router.post('/ack', requireSecret, async (req, res) => {
     }
 });
 
-// 3. Import Config (LAN pushes Employees/Work Codes)
+// 3. Import Config (LAN pushes Companies/Employees/Work Codes)
 router.post('/import', requireSecret, async (req, res) => {
-    const { employees, work_codes } = req.body;
-    const results = { employees: 0, work_codes: 0 };
+    const { companies, employees, work_codes } = req.body;
+    const results = { companies: 0, employees: 0, work_codes: 0 };
 
     try {
+        // Upsert Companies FIRST (employees have FK to companies)
+        if (companies && companies.length > 0) {
+            for (const co of companies) {
+                await db.query(`
+                    INSERT INTO companies (id, name)
+                    VALUES ($1, $2)
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name
+                `, [co.id, co.name]);
+                results.companies++;
+            }
+        }
+
         // Upsert Employees (LAN is source of truth)
         if (employees && employees.length > 0) {
             for (const emp of employees) {
@@ -77,7 +90,7 @@ router.post('/import', requireSecret, async (req, res) => {
             }
         }
 
-        console.log(`[Sync] Imported ${results.employees} employees, ${results.work_codes} work codes`);
+        console.log(`[Sync] Imported ${results.companies} companies, ${results.employees} employees, ${results.work_codes} work codes`);
         res.json({ success: true, ...results });
 
     } catch (e) {
