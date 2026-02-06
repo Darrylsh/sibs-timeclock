@@ -173,7 +173,7 @@ const DashboardScreen = () => {
                                 value={selectedCode ?? 0}
                                 onChange={e => setSelectedCode(Number(e.target.value))}
                             >
-                                {workCodes.map(wc => <option key={wc.id} value={wc.id}>{wc.code} - {wc.description}</option>)}
+                                {workCodes.map(wc => <option key={wc.id} value={wc.id}>{wc.description}</option>)}
                             </select>
                         </div>
                         <button className="btn btn-primary w-full py-6 text-2xl shadow-lg flex-1 mb-4" onClick={() => handlePunch('punch_in')}>CLOCK IN</button>
