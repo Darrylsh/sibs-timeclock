@@ -21,6 +21,7 @@ router.get('/export', requireSecret, async (req, res) => {
             ORDER BY server_time ASC 
             LIMIT 100
         `);
+
         res.json(result.rows);
     } catch (e) {
         res.status(500).json({ error: e.message });

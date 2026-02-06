@@ -112,7 +112,7 @@ const DashboardScreen = () => {
         }
     };
 
-    const handlePunch = async (type: string) => {
+    const handlePunch = async (type: string, notes: string | null = null) => {
         setLoading(true);
 
         // 1. Get GPS
@@ -137,7 +137,8 @@ const DashboardScreen = () => {
             event_type: type,
             device_gps_time: gps.time || new Date().toISOString(),
             gps_lat: gps.lat,
-            gps_long: gps.long
+            gps_long: gps.long,
+            notes: notes
         };
         console.log('Submitting Event:', event);
 
@@ -160,8 +161,17 @@ const DashboardScreen = () => {
 
     const hasPendingSync = recentEvents.some(e => e.is_synced_to_lan === false);
 
+    const getActiveWorkCode = () => {
+        const lastIn = [...recentEvents].reverse().find(e => e.event_type === 'punch_in');
+        if (!lastIn) return null;
+        const code = workCodes.find(wc => wc.id === lastIn.work_code_id);
+        return code ? code.description : null;
+    };
+
     const renderButtons = () => {
         if (loading) return <div className="p-8 text-center text-muted">Processing...</div>;
+
+        const activeCode = getActiveWorkCode();
 
         switch (status) {
             case 'OFF_DUTY':
@@ -184,27 +194,43 @@ const DashboardScreen = () => {
             case 'ON_DUTY_NO_LUNCH':
                 return (
                     <div className="flex flex-col h-full gap-4 justify-center">
-                        <div className="text-center text-success font-medium text-xl py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">ON DUTY</div>
+                        <div className="text-center text-success font-medium text-xl py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                            ON DUTY
+                            {activeCode && <div className="text-xs opacity-70 mt-1 uppercase tracking-widest">{activeCode}</div>}
+                        </div>
                         <button className="btn btn-primary w-full py-6 text-xl flex-1" style={{ background: '#f59e0b' }} onClick={() => handlePunch('lunch_start')}>START LUNCH</button>
-                        <button className="btn btn-danger w-full py-6 text-xl flex-1" onClick={() => handlePunch('punch_out')}>CLOCK OUT</button>
+                        <button className="btn btn-danger w-full py-6 text-xl flex-1" onClick={() => {
+                            const note = window.prompt("Add a comment? (Optional)");
+                            handlePunch('punch_out', note);
+                        }}>CLOCK OUT</button>
                     </div>
                 );
             case 'ON_LUNCH':
                 return (
                     <div className="flex flex-col h-full gap-4 justify-center">
-                        <div className="text-center text-warning font-medium text-xl py-4 bg-amber-500/10 rounded-xl border border-amber-500/20">ON LUNCH</div>
+                        <div className="text-center text-warning font-medium text-xl py-4 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                            ON LUNCH
+                            {activeCode && <div className="text-xs opacity-70 mt-1 uppercase tracking-widest">{activeCode}</div>}
+                        </div>
                         <button className="btn btn-primary w-full py-6 text-xl flex-1" onClick={() => handlePunch('lunch_end')}>END LUNCH</button>
                     </div>
                 );
             case 'ON_DUTY_LUNCH_TAKEN':
                 return (
                     <div className="flex flex-col h-full gap-4 justify-center">
-                        <div className="text-center text-success font-medium text-xl py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">ON DUTY (Lunch Taken)</div>
-                        <button className="btn btn-danger w-full py-6 text-xl flex-1" onClick={() => handlePunch('punch_out')}>CLOCK OUT</button>
+                        <div className="text-center text-success font-medium text-xl py-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                            ON DUTY (Lunch Taken)
+                            {activeCode && <div className="text-xs opacity-70 mt-1 uppercase tracking-widest">{activeCode}</div>}
+                        </div>
+                        <button className="btn btn-danger w-full py-6 text-xl flex-1" onClick={() => {
+                            const note = window.prompt("Add a comment? (Optional)");
+                            handlePunch('punch_out', note);
+                        }}>CLOCK OUT</button>
                     </div>
                 );
         }
     };
+
 
     return (
         <div style={{ height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at top left, #1e1b4b, #0f172a)', overflow: 'hidden' }}>
