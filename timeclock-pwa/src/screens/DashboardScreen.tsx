@@ -75,7 +75,9 @@ const DashboardScreen = () => {
         deriveState(allEvents);
 
         if (fetchedWorkCodes.length > 0 && selectedCode === null) {
-            setSelectedCode(fetchedWorkCodes[0].id);
+            // Default to matching ID=0 (Regular) if exists, else first item
+            const regArgs = fetchedWorkCodes.find(wc => wc.id === 0);
+            setSelectedCode(regArgs ? 0 : fetchedWorkCodes[0].id);
         }
     };
 
