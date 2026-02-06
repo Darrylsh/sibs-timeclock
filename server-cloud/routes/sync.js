@@ -83,7 +83,6 @@ router.post('/import', requireSecret, async (req, res) => {
         // Upsert Work Codes
         if (work_codes && work_codes.length > 0) {
             for (const wc of work_codes) {
-                console.log(`[Sync] Importing WorkCode: ${wc.code} (ID: ${wc.id}), Selectable: ${wc.is_selectable}`);
                 await client.query(`
                     INSERT INTO work_codes (id, code, description, is_selectable)
                     VALUES ($1, $2, $3, $4)
