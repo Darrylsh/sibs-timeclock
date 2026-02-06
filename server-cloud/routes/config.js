@@ -23,6 +23,7 @@ router.get('/', authenticate, async (req, res) => {
             WHERE is_selectable = TRUE
             UNION
             SELECT 0, 'REG', 'Regular Hours'
+            ORDER BY description ASC
         `);
 
         // Use logic similar to original but simpler for now (all codes or filtered by employee->company)
