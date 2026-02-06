@@ -43,14 +43,18 @@ router.post('/ack', requireSecret, async (req, res) => {
 
 // 3. Import Config (LAN pushes Companies/Employees/Work Codes)
 router.post('/import', requireSecret, async (req, res) => {
-    const { companies, employees, work_codes } = req.body;
-    const results = { companies: 0, employees: 0, work_codes: 0 };
+    const { companies, employees, work_codes, timeclock_users } = req.body;
+    const results = { companies: 0, employees: 0, work_codes: 0, timeclock_users: 0 };
+
+    const client = await db.pool.connect();
 
     try {
+        await client.query('BEGIN');
+
         // Upsert Companies FIRST (employees have FK to companies)
         if (companies && companies.length > 0) {
             for (const co of companies) {
-                await db.query(`
+                await client.query(`
                     INSERT INTO companies (id, name)
                     VALUES ($1, $2)
                     ON CONFLICT (id) DO UPDATE SET
@@ -63,7 +67,7 @@ router.post('/import', requireSecret, async (req, res) => {
         // Upsert Employees (LAN is source of truth)
         if (employees && employees.length > 0) {
             for (const emp of employees) {
-                await db.query(`
+                await client.query(`
                     INSERT INTO employees (id, first_name, last_name, company_id)
                     VALUES ($1, $2, $3, $4)
                     ON CONFLICT (id) DO UPDATE SET
@@ -78,7 +82,7 @@ router.post('/import', requireSecret, async (req, res) => {
         // Upsert Work Codes
         if (work_codes && work_codes.length > 0) {
             for (const wc of work_codes) {
-                await db.query(`
+                await client.query(`
                     INSERT INTO work_codes (id, code, description, is_selectable)
                     VALUES ($1, $2, $3, $4)
                     ON CONFLICT (id) DO UPDATE SET
@@ -91,13 +95,10 @@ router.post('/import', requireSecret, async (req, res) => {
         }
 
         // Upsert Timeclock Users (Login Accounts)
-        if (req.body.timeclock_users && req.body.timeclock_users.length > 0) {
-            results.timeclock_users = 0;
-            for (const u of req.body.timeclock_users) {
-                // Ensure role is valid (default to user)
+        if (timeclock_users && timeclock_users.length > 0) {
+            for (const u of timeclock_users) {
                 const role = (u.role === 'admin' || u.role === 'user') ? u.role : 'user';
-
-                await db.query(`
+                await client.query(`
                     INSERT INTO timeclock_users (id, phone, pin_hash, role, employee_id, is_active)
                     VALUES ($1, $2, $3, $4, $5, $6)
                     ON CONFLICT (id) DO UPDATE SET
@@ -111,13 +112,18 @@ router.post('/import', requireSecret, async (req, res) => {
             }
         }
 
-        console.log(`[Sync] Imported ${results.companies} companies, ${results.employees} employees, ${results.work_codes} work codes`);
+        await client.query('COMMIT');
+        console.log(`[Sync] Transaction complete. Imported ${results.companies} cos, ${results.employees} emps, ${results.work_codes} codes, ${results.timeclock_users} users`);
         res.json({ success: true, ...results });
 
     } catch (e) {
-        console.error('[Sync] Import error:', e.message);
+        await client.query('ROLLBACK');
+        console.error('[Sync] Import error (rolled back):', e.message);
         res.status(500).json({ error: e.message });
+    } finally {
+        client.release();
     }
 });
+
 
 module.exports = router;

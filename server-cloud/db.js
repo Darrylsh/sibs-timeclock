@@ -8,6 +8,13 @@ const pool = new Pool({
     database: process.env.DB_NAME,
 });
 
+// Add error handler to prevent process hanging on idle client errors
+pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+});
+
 module.exports = {
     query: (text, params) => pool.query(text, params),
+    pool, // Export pool for transaction support
 };
+
