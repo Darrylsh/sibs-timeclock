@@ -44,10 +44,11 @@ router.post('/', authenticate, async (req, res) => {
                 INSERT INTO time_events 
                 (employee_id, work_code_id, event_type, server_time, device_gps_time, gps_lat, gps_long, is_synced_to_lan, notes)
                 VALUES ($1, $2, $3, NOW(), $4, $5, $6, FALSE, $7)
-            `, [event.employee_id, dbWorkCodeId, event.event_type, event.device_gps_time, event.gps_lat, event.gps_long, event.notes]);
+            `, [event.employee_id, dbWorkCodeId, event.event_type, event.device_gps_time, event.gps_lat, event.gps_long, event.notes ?? null]);
 
             results.push({ success: true });
         }
+
 
         res.json({ success: true, count: results.length });
     } catch (e) {
