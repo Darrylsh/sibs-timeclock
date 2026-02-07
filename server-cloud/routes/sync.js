@@ -99,6 +99,8 @@ router.post('/import', requireSecret, async (req, res) => {
         if (timeclock_users && timeclock_users.length > 0) {
             for (const u of timeclock_users) {
                 const role = (u.role === 'admin' || u.role === 'user') ? u.role : 'user';
+                // Delete any existing user with this phone but different ID (LAN is source of truth)
+                await client.query(`DELETE FROM timeclock_users WHERE phone = $1 AND id != $2`, [u.phone, u.id]);
                 await client.query(`
                     INSERT INTO timeclock_users (id, phone, pin_hash, role, employee_id, is_active)
                     VALUES ($1, $2, $3, $4, $5, $6)
