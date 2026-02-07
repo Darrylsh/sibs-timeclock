@@ -38,7 +38,7 @@ router.post('/', authenticate, async (req, res) => {
                 continue;
             }
 
-            const dbWorkCodeId = (event.work_code_id === 0) ? null : event.work_code_id;
+            const dbWorkCodeId = event.work_code_id ?? null; // Keep 0 as valid (Regular Hours)
 
             await db.query(`
                 INSERT INTO time_events 
